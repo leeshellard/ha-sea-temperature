@@ -45,7 +45,7 @@ model when no recent buoy is close enough. Wave values come from the buoy too wh
 3. The sensors then show `source`, `buoy`, `buoy_distance_km` and `model_temperature` so you can see
    what you are looking at. Buoys with no reading in the last 3 hours are ignored.
 
-Leave the key blank to turn it off. In testing, nearby buoys read within about 0.5 °C of the model.
+Leave the key blank to turn it off. In testing, nearby buoys read within about 1 °C of the model in spot checks.
 
 Real time data from the buoys is from the
 [Regional Coastal Monitoring Programme](https://coastalmonitoring.org/), made freely available
