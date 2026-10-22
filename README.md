@@ -1,7 +1,8 @@
 # Sea Temperature for Home Assistant
 
-Live sea temperature (and wave height, period and direction) for any coastal
-location, with a point-and-click picker. Built with the UK in mind, works worldwide.
+Sea temperature, swim comfort, sea state, waves and tides for any coastal location, with a
+search-by-name and map picker. Built with the UK in mind, works worldwide. Uses the Open-Meteo
+marine model, and optionally real readings from UK coastal buoys and official tide predictions.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=leeshellard&repository=ha-sea-temperature&category=integration)
 
@@ -68,7 +69,7 @@ under the Open Government Licence. These are real-time data and are not quality-
 
 ## How accurate is it?
 
-Data comes from the [Open-Meteo Marine API](https://open-meteo.com/en/docs/marine-weather-api),
+By default data comes from the [Open-Meteo Marine API](https://open-meteo.com/en/docs/marine-weather-api),
 which is a **modelled** value on a grid several kilometres wide, not a thermometer in the water.
 Offshore it is usually close; right at a shallow beach, bay or estuary it can be off by a few degrees.
 
