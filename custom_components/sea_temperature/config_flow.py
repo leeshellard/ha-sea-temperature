@@ -6,7 +6,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -15,11 +21,32 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    NumberSelector,
+    NumberSelectorConfig,
     TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
-from .api import CannotConnect, NoSeaData, Place, async_get_open_meteo, async_search_places
-from .const import CONF_LOCATION_NAME, DOMAIN, MAX_GRID_DISTANCE_KM, USER_AGENT
+from .api import (
+    CannotConnect,
+    InvalidAuth,
+    NoSeaData,
+    Place,
+    async_get_cco_buoys,
+    async_get_open_meteo,
+    async_search_places,
+)
+from .const import (
+    CONF_BUOY_MAX_KM,
+    CONF_CCO_DOMAIN,
+    CONF_CCO_KEY,
+    CONF_LOCATION_NAME,
+    DEFAULT_BUOY_MAX_KM,
+    DOMAIN,
+    MAX_GRID_DISTANCE_KM,
+    USER_AGENT,
+)
 
 CONF_QUERY = "query"
 CONF_PLACE = "place"
@@ -30,6 +57,11 @@ class SeaTemperatureConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle adding a sea location."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return SeaTemperatureOptionsFlow()
 
     def __init__(self) -> None:
         self._places: list[Place] = []
@@ -146,3 +178,62 @@ def _label(place: Place) -> str:
     parts = [p.strip() for p in place.name.split(",")]
     label = ", ".join(parts[:1] + parts[-3:]) if len(parts) > 4 else place.name
     return f"{'🏖 ' if place.kind == 'beach' else ''}{label}"
+
+
+class SeaTemperatureOptionsFlow(OptionsFlow):
+    """Optional measured buoy data from the Regional Coastal Monitoring Programme."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        current = self.config_entry.options
+        if user_input is not None:
+            key = (user_input.get(CONF_CCO_KEY) or "").strip()
+            domain = (user_input.get(CONF_CCO_DOMAIN) or "").strip()
+            domain = domain.removeprefix("https://").removeprefix("http://").strip("/")
+            if not key:
+                # Blank key turns the buoy layer off.
+                return self.async_create_entry(data={})
+            if not domain:
+                errors[CONF_CCO_DOMAIN] = "domain_required"
+            else:
+                try:
+                    await async_get_cco_buoys(
+                        async_get_clientsession(self.hass), key, domain, USER_AGENT
+                    )
+                except InvalidAuth:
+                    errors["base"] = "invalid_auth"
+                except CannotConnect:
+                    errors["base"] = "cannot_connect"
+                else:
+                    return self.async_create_entry(
+                        data={
+                            CONF_CCO_KEY: key,
+                            CONF_CCO_DOMAIN: domain,
+                            CONF_BUOY_MAX_KM: user_input[CONF_BUOY_MAX_KM],
+                        }
+                    )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_CCO_KEY, default=current.get(CONF_CCO_KEY, "")
+                    ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+                    vol.Optional(
+                        CONF_CCO_DOMAIN, default=current.get(CONF_CCO_DOMAIN, "")
+                    ): TextSelector(),
+                    vol.Required(
+                        CONF_BUOY_MAX_KM,
+                        default=current.get(CONF_BUOY_MAX_KM, DEFAULT_BUOY_MAX_KM),
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=5, max=100, step=1, unit_of_measurement="km"
+                        )
+                    ),
+                }
+            ),
+            errors=errors,
+        )

@@ -5,6 +5,13 @@ from datetime import timedelta
 DOMAIN = "sea_temperature"
 
 CONF_LOCATION_NAME = "name"
+CONF_CCO_KEY = "cco_api_key"
+CONF_CCO_DOMAIN = "cco_domain"
+CONF_BUOY_MAX_KM = "buoy_max_distance_km"
+
+DEFAULT_BUOY_MAX_KM = 25
+# Buoy readings older than this are ignored (some stations go quiet for years).
+BUOY_MAX_AGE = timedelta(hours=3)
 
 UPDATE_INTERVAL = timedelta(minutes=30)
 

@@ -30,6 +30,27 @@ Add the integration again for each extra beach. Each one becomes a device with:
 | Wave period | no |
 | Wave direction | no |
 
+## Measured buoy data (optional)
+
+If a Regional Coastal Monitoring Programme wave buoy that reports sea temperature is close to your
+beach, the integration can use its **measured** reading instead of the model, falling back to the
+model when no recent buoy is close enough. Wave values come from the buoy too when it reports them.
+
+1. Request a free API key on the [CCO API page](https://coastalmonitoring.org/ccoresources/api/)
+   ("Obtaining an API key for your own service"). You give them a domain; keys only work with the
+   domain they were issued for.
+2. In Home Assistant open **Settings → Devices & services → Sea Temperature → Configure** on your
+   beach, then enter the key, the same domain, and the furthest buoy distance you will accept
+   (default 25 km).
+3. The sensors then show `source`, `buoy`, `buoy_distance_km` and `model_temperature` so you can see
+   what you are looking at. Buoys with no reading in the last 3 hours are ignored.
+
+Leave the key blank to turn it off. In testing, nearby buoys read within about 0.5 °C of the model.
+
+Real time data from the buoys is from the
+[Regional Coastal Monitoring Programme](https://coastalmonitoring.org/), made freely available
+under the Open Government Licence. These are real-time data and are not quality-controlled.
+
 ## How accurate is it?
 
 Data comes from the [Open-Meteo Marine API](https://open-meteo.com/en/docs/marine-weather-api),
@@ -52,5 +73,4 @@ Assistant version and any `sea_temperature` lines from **Settings → System →
 
 ## Roadmap
 
-- Measured readings from nearby buoys (needs data-provider credentials), falling back to the model.
 - Higher-resolution UK coastal model.

@@ -109,6 +109,11 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
     """A sensor for one reading at one location."""
 
     _attr_has_entity_name = True
+    _attr_attribution = (
+        "Model data from Open-Meteo.com. Buoy data, when enabled, is from the Regional "
+        "Coastal Monitoring Programme under the Open Government Licence (real-time, "
+        "not quality-controlled)."
+    )
     entity_description: SeaSensorDescription
 
     def __init__(
@@ -123,8 +128,8 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
-            manufacturer="Open-Meteo",
-            model="Marine model",
+            manufacturer="Open-Meteo / Regional Coastal Monitoring",
+            model="Marine model and buoys",
             entry_type=DeviceEntryType.SERVICE,
         )
 
@@ -138,10 +143,15 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
         attrs: dict[str, Any] = {
             "source": data.source,
             "reading_time": data.observed_at.isoformat(),
-            "grid_latitude": data.grid_latitude,
-            "grid_longitude": data.grid_longitude,
-            "distance_to_grid_point_km": data.distance_km,
         }
+        if data.station is not None:
+            attrs["buoy"] = data.station
+            attrs["buoy_distance_km"] = data.station_distance_km
+            attrs["model_temperature"] = data.model_temperature
+        if data.distance_km is not None:
+            attrs["grid_latitude"] = data.grid_latitude
+            attrs["grid_longitude"] = data.grid_longitude
+            attrs["distance_to_grid_point_km"] = data.distance_km
         if self.entity_description.key == "swim_comfort":
             attrs["temperature"] = data.temperature
             attrs["rough_water"] = (
@@ -149,10 +159,14 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
                 and data.wave_height >= ROUGH_WATER_WAVE_HEIGHT_M
             )
             attrs["note"] = (
-                "Based on modelled temperature only. Not safety advice: check "
+                "Based on sea temperature only. Not safety advice: check "
                 "local conditions, tides and flags before entering the water."
             )
-        if data.distance_km > WARN_GRID_DISTANCE_KM:
+        if (
+            data.station is None
+            and data.distance_km is not None
+            and data.distance_km > WARN_GRID_DISTANCE_KM
+        ):
             attrs["accuracy_note"] = (
                 "The nearest sea grid point is a long way from this location; "
                 "treat the value as approximate."

@@ -12,16 +12,23 @@
       "search": {
         "title": "Search",
         "description": "Enter a beach or place name, e.g. \"Bournemouth beach\".",
-        "data": { "query": "Name" }
+        "data": {
+          "query": "Name"
+        }
       },
       "pick": {
         "title": "Choose a result",
-        "data": { "place": "Location" }
+        "data": {
+          "place": "Location"
+        }
       },
       "map": {
         "title": "Pick a point",
         "description": "Place the pin in the sea or on the shore. The nearest sea grid point will be used.",
-        "data": { "name": "Name", "location": "Location" }
+        "data": {
+          "name": "Name",
+          "location": "Location"
+        }
       }
     },
     "error": {
@@ -36,7 +43,9 @@
   },
   "entity": {
     "sensor": {
-      "sea_temperature": { "name": "Sea temperature" },
+      "sea_temperature": {
+        "name": "Sea temperature"
+      },
       "swim_comfort": {
         "name": "Swim comfort",
         "state": {
@@ -47,9 +56,36 @@
           "warm": "Warm"
         }
       },
-      "wave_height": { "name": "Wave height" },
-      "wave_period": { "name": "Wave period" },
-      "wave_direction": { "name": "Wave direction" }
+      "wave_height": {
+        "name": "Wave height"
+      },
+      "wave_period": {
+        "name": "Wave period"
+      },
+      "wave_direction": {
+        "name": "Wave direction"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Measured buoy data (optional)",
+        "description": "Use real readings from the nearest Regional Coastal Monitoring buoy instead of the model when one is close enough. Needs a free API key from coastalmonitoring.org (see the README). Leave the key blank to turn this off.",
+        "data": {
+          "cco_api_key": "API key",
+          "cco_domain": "Domain the key was issued for",
+          "buoy_max_distance_km": "Maximum distance to a buoy"
+        },
+        "data_description": {
+          "cco_domain": "The domain you gave when you requested the key, e.g. example.org"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The key or domain was rejected. Check both match what you registered.",
+      "cannot_connect": "Could not reach the buoy service. Try again shortly.",
+      "domain_required": "Enter the domain the key was issued for."
     }
   }
 }
