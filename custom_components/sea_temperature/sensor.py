@@ -15,7 +15,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import UnitOfLength, UnitOfTemperature, UnitOfTime, DEGREE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import SeaTemperatureConfigEntry, SeaTemperatureCoordinator
@@ -63,7 +63,7 @@ SENSORS: tuple[SeaSensorDescription, ...] = (
         key="wave_direction",
         translation_key="wave_direction",
         native_unit_of_measurement=DEGREE,
-        state_class=SensorStateClass.MEASUREMENT_ANGLE,
+        state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
         value_fn=lambda r: r.wave_direction,
     ),
@@ -73,7 +73,7 @@ SENSORS: tuple[SeaSensorDescription, ...] = (
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: SeaTemperatureConfigEntry,
-    async_add_entities: AddConfigEntryEntitiesCallback,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sensors for a location."""
     coordinator = entry.runtime_data
