@@ -1,0 +1,45 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a sea location",
+        "description": "How would you like to choose the location?",
+        "menu_options": {
+          "search": "Search for a beach or place by name",
+          "map": "Pick a point on the map"
+        }
+      },
+      "search": {
+        "title": "Search",
+        "description": "Enter a beach or place name, e.g. \"Bournemouth beach\".",
+        "data": { "query": "Name" }
+      },
+      "pick": {
+        "title": "Choose a result",
+        "data": { "place": "Location" }
+      },
+      "map": {
+        "title": "Pick a point",
+        "description": "Place the pin in the sea or on the shore. The nearest sea grid point will be used.",
+        "data": { "name": "Name", "location": "Location" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the service. Try again shortly.",
+      "no_results": "No places found. Try a different name.",
+      "no_sea_data": "No sea data is available for this point. Is it inland?",
+      "too_far_from_sea": "This point is too far from the sea. Choose a coastal location."
+    },
+    "abort": {
+      "already_configured": "This location is already added."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sea_temperature": { "name": "Sea temperature" },
+      "wave_height": { "name": "Wave height" },
+      "wave_period": { "name": "Wave period" },
+      "wave_direction": { "name": "Wave direction" }
+    }
+  }
+}

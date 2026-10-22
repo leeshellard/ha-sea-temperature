@@ -1,0 +1,12 @@
+{
+  "domain": "sea_temperature",
+  "name": "Sea Temperature",
+  "codeowners": ["@leeshellard"],
+  "config_flow": true,
+  "documentation": "https://github.com/leeshellard/ha-sea-temperature",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/leeshellard/ha-sea-temperature/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
