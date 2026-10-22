@@ -19,6 +19,7 @@ Add the integration again for each extra beach. Each one becomes a device with:
 | Entity | Enabled by default |
 |---|---|
 | Sea temperature | yes |
+| Swim comfort | yes |
 | Wave height | yes |
 | Wave period | no |
 | Wave direction | no |

@@ -37,6 +37,16 @@
   "entity": {
     "sensor": {
       "sea_temperature": { "name": "Sea temperature" },
+      "swim_comfort": {
+        "name": "Swim comfort",
+        "state": {
+          "very_cold": "Very cold",
+          "cold": "Cold",
+          "fresh": "Fresh",
+          "comfortable": "Comfortable",
+          "warm": "Warm"
+        }
+      },
       "wave_height": { "name": "Wave height" },
       "wave_period": { "name": "Wave period" },
       "wave_direction": { "name": "Wave direction" }

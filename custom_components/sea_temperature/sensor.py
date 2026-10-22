@@ -27,7 +27,25 @@ from .const import DOMAIN, WARN_GRID_DISTANCE_KM
 class SeaSensorDescription(SensorEntityDescription):
     """Describes a sea sensor."""
 
-    value_fn: Callable[[SeaReading], float | None]
+    value_fn: Callable[[SeaReading], float | str | None]
+
+
+# Upper temperature bound (°C) for each band, tuned for UK/N. European waters.
+SWIM_BANDS: tuple[tuple[float, str], ...] = (
+    (10.0, "very_cold"),
+    (14.0, "cold"),
+    (17.0, "fresh"),
+    (20.0, "comfortable"),
+)
+SWIM_OPTIONS = [band for _, band in SWIM_BANDS] + ["warm"]
+ROUGH_WATER_WAVE_HEIGHT_M = 1.5
+
+
+def _swim_comfort(reading: SeaReading) -> str:
+    for upper, band in SWIM_BANDS:
+        if reading.temperature < upper:
+            return band
+    return "warm"
 
 
 SENSORS: tuple[SeaSensorDescription, ...] = (
@@ -39,6 +57,13 @@ SENSORS: tuple[SeaSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
         value_fn=lambda r: r.temperature,
+    ),
+    SeaSensorDescription(
+        key="swim_comfort",
+        translation_key="swim_comfort",
+        device_class=SensorDeviceClass.ENUM,
+        options=SWIM_OPTIONS,
+        value_fn=_swim_comfort,
     ),
     SeaSensorDescription(
         key="wave_height",
@@ -117,6 +142,16 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
             "grid_longitude": data.grid_longitude,
             "distance_to_grid_point_km": data.distance_km,
         }
+        if self.entity_description.key == "swim_comfort":
+            attrs["temperature"] = data.temperature
+            attrs["rough_water"] = (
+                data.wave_height is not None
+                and data.wave_height >= ROUGH_WATER_WAVE_HEIGHT_M
+            )
+            attrs["note"] = (
+                "Based on modelled temperature only. Not safety advice: check "
+                "local conditions, tides and flags before entering the water."
+            )
         if data.distance_km > WARN_GRID_DISTANCE_KM:
             attrs["accuracy_note"] = (
                 "The nearest sea grid point is a long way from this location; "
