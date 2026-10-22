@@ -6,6 +6,19 @@ marine model, and optionally real readings from UK coastal buoys and official ti
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=leeshellard&repository=ha-sea-temperature&category=integration)
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/device.png" alt="A beach device with its sensors: tides, sea state, sea temperature, swim comfort, waves" width="640">
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/search.png" alt="Searching for a beach by name" width="320"><br>Search by name</td>
+    <td align="center"><img src="docs/images/map-picker.png" alt="Dropping a pin on the map" width="320"><br>Or pick a point on the map</td>
+  </tr>
+</table>
+
 ## Install (HACS)
 
 Click the button above, or add it by hand:
