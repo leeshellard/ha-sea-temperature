@@ -10,6 +10,8 @@ CONF_CCO_DOMAIN = "cco_domain"
 CONF_BUOY_MAX_KM = "buoy_max_distance_km"
 
 DEFAULT_BUOY_MAX_KM = 25
+# Official tide predictions are only used from a station this close.
+TIDE_STATION_MAX_KM = 15
 # Buoy readings older than this are ignored (some stations go quiet for years).
 BUOY_MAX_AGE = timedelta(hours=3)
 

@@ -5,7 +5,7 @@ Kept free of Home Assistant imports so it can be tested on its own.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from math import asin, cos, radians, sin, sqrt
 
@@ -13,6 +13,7 @@ import aiohttp
 
 OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+CCO_TIDES_URL = "https://coastalmonitoring.org/observations/tidepredictions/latest.geojson"
 CCO_WAVES_URL = "https://coastalmonitoring.org/observations/waves/latest.geojson"
 
 _CURRENT_FIELDS = "sea_surface_temperature,wave_height,wave_period,wave_direction"
@@ -53,6 +54,21 @@ class SeaReading:
     station: str | None = None
     station_distance_km: float | None = None
     model_temperature: float | None = None
+    # Change in modelled sea temperature over the last 24 hours.
+    temperature_change_24h: float | None = None
+    tide: Tide | None = None
+
+
+@dataclass
+class Tide:
+    """Where the tide is heading and the next high and low water."""
+
+    state: str  # "rising" or "falling"
+    next_high: datetime | None
+    next_low: datetime | None
+    next_high_height: float | None
+    next_low_height: float | None
+    source: str
 
 
 @dataclass
@@ -95,6 +111,9 @@ async def async_get_open_meteo(
         "latitude": f"{latitude:.4f}",
         "longitude": f"{longitude:.4f}",
         "current": _CURRENT_FIELDS,
+        "hourly": "sea_surface_temperature,sea_level_height_msl",
+        "past_hours": "25",
+        "forecast_hours": "36",
         "timezone": "GMT",
         "cell_selection": "sea",
     }
@@ -119,16 +138,75 @@ async def async_get_open_meteo(
     grid_lon = float(data["longitude"])
     observed = datetime.fromisoformat(current["time"]).replace(tzinfo=timezone.utc)
 
+    hourly = data.get("hourly") or {}
+    times = hourly.get("time") or []
+    change = _change_24h(times, hourly.get("sea_surface_temperature") or [], observed, float(temperature))
+    tide = _tide_from_series(
+        times, hourly.get("sea_level_height_msl") or [], datetime.now(timezone.utc)
+    )
+
     return SeaReading(
         source="Open-Meteo Marine (model)",
         observed_at=observed,
         temperature=float(temperature),
+        temperature_change_24h=change,
+        tide=tide,
         wave_height=current.get("wave_height"),
         wave_period=current.get("wave_period"),
         wave_direction=current.get("wave_direction"),
         grid_latitude=grid_lat,
         grid_longitude=grid_lon,
         distance_km=round(distance_km(latitude, longitude, grid_lat, grid_lon), 1),
+    )
+
+
+def _change_24h(
+    times: list[str], values: list[float | None], now: datetime, current: float
+) -> float | None:
+    """Current temperature minus the value 24 hours earlier, if the model has it."""
+    target = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:00")
+    try:
+        earlier = values[times.index(target)]
+    except (ValueError, IndexError):
+        return None
+    return None if earlier is None else round(current - earlier, 2)
+
+
+def _tide_from_series(
+    times: list[str], levels: list[float | None], now: datetime
+) -> Tide | None:
+    """Find the next high and low water in the modelled hourly sea level.
+
+    The model's tide times can be around an hour out, so this is approximate.
+    """
+    extremes: list[tuple[datetime, str, float]] = []
+    for i in range(1, len(levels) - 1):
+        a, b, c = levels[i - 1], levels[i], levels[i + 1]
+        if a is None or b is None or c is None:
+            continue
+        is_high = b > a and b >= c
+        is_low = b < a and b <= c
+        if not (is_high or is_low):
+            continue
+        denominator = a - 2 * b + c
+        offset = 0.5 * (a - c) / denominator if denominator else 0.0
+        when = datetime.fromisoformat(times[i]).replace(tzinfo=timezone.utc) + timedelta(
+            hours=offset
+        )
+        extremes.append((when, "high" if is_high else "low", b))
+
+    upcoming = [e for e in extremes if e[0] > now]
+    if not upcoming:
+        return None
+    high = next((e for e in upcoming if e[1] == "high"), None)
+    low = next((e for e in upcoming if e[1] == "low"), None)
+    return Tide(
+        state="rising" if upcoming[0][1] == "high" else "falling",
+        next_high=high[0] if high else None,
+        next_low=low[0] if low else None,
+        next_high_height=round(high[2], 2) if high else None,
+        next_low_height=round(low[2], 2) if low else None,
+        source="Open-Meteo model (approximate: times can be up to about an hour out)",
     )
 
 
@@ -247,9 +325,16 @@ def nearest_buoy(
 
 
 def combine(
-    model: SeaReading | None, nearest: tuple[Buoy, float] | None
+    model: SeaReading | None,
+    nearest: tuple[Buoy, float] | None,
+    tide: Tide | None = None,
 ) -> SeaReading | None:
-    """Prefer the measured buoy temperature, filling the gaps from the model."""
+    """Prefer the measured buoy temperature, filling the gaps from the model.
+
+    An official tide prediction, when given, replaces the modelled tide.
+    """
+    if tide is not None and model is not None:
+        model = replace(model, tide=tide)
     if nearest is None:
         return model
     buoy, dist = nearest
@@ -270,4 +355,96 @@ def combine(
         station=buoy.name,
         station_distance_km=dist,
         model_temperature=model.temperature if model else None,
+        temperature_change_24h=model.temperature_change_24h if model else None,
+        tide=model.tide if model else tide,
+    )
+
+
+@dataclass
+class TideStation:
+    """A tide prediction station with the next high and low water."""
+
+    name: str
+    latitude: float
+    longitude: float
+    next_high: datetime
+    next_low: datetime
+    next_high_height: float | None
+    next_low_height: float | None
+
+
+def _cco_time(stamp: str | None) -> datetime | None:
+    if not stamp:
+        return None
+    try:
+        return datetime.strptime(stamp, "%Y%m%d#%H%M%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+async def async_get_cco_tides(
+    session: aiohttp.ClientSession, api_key: str, domain: str, user_agent: str
+) -> list[TideStation]:
+    """Fetch official tide predictions. Many stations return nothing; those are skipped."""
+    headers = {
+        "X-API-Key": api_key,
+        "Referer": f"https://{domain}/",
+        "User-Agent": user_agent,
+        "Accept": "application/json",
+    }
+    try:
+        async with session.get(CCO_TIDES_URL, headers=headers, timeout=_TIMEOUT) as resp:
+            if resp.status in (401, 403):
+                raise InvalidAuth(f"HTTP {resp.status}")
+            resp.raise_for_status()
+            data = await resp.json(content_type=None)
+    except (aiohttp.ClientError, TimeoutError) as err:
+        raise CannotConnect(str(err)) from err
+
+    stations: list[TideStation] = []
+    for feature in data.get("features", []):
+        props = feature.get("properties") or {}
+        coords = (feature.get("geometry") or {}).get("coordinates") or []
+        high = _cco_time(props.get("hw_timestamp"))
+        low = _cco_time(props.get("lw_timestamp"))
+        if high is None or low is None or len(coords) < 2:
+            continue
+        stations.append(
+            TideStation(
+                name=props.get("sensor") or "Unknown station",
+                latitude=float(coords[1]),
+                longitude=float(coords[0]),
+                next_high=high,
+                next_low=low,
+                next_high_height=_float(props.get("hw")),
+                next_low_height=_float(props.get("lw")),
+            )
+        )
+    return stations
+
+
+def nearest_tide_station(
+    stations: list[TideStation],
+    latitude: float,
+    longitude: float,
+    max_km: float,
+    now: datetime,
+) -> Tide | None:
+    """Official prediction from the closest station whose next high and low are still ahead."""
+    candidates = [
+        (s, distance_km(latitude, longitude, s.latitude, s.longitude))
+        for s in stations
+        if s.next_high > now and s.next_low > now
+    ]
+    candidates = [(s, d) for s, d in candidates if d <= max_km]
+    if not candidates:
+        return None
+    station, dist = min(candidates, key=lambda c: c[1])
+    return Tide(
+        state="rising" if station.next_high < station.next_low else "falling",
+        next_high=station.next_high,
+        next_low=station.next_low,
+        next_high_height=station.next_high_height,
+        next_low_height=station.next_low_height,
+        source=f"Official predictions: {station.name} ({dist:.1f} km)",
     )

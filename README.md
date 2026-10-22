@@ -26,9 +26,24 @@ Add the integration again for each extra beach. Each one becomes a device with:
 |---|---|
 | Sea temperature | yes |
 | Swim comfort (very cold → warm, with a `rough_water` flag) | yes |
+| Sea state (Douglas scale, calm → phenomenal) | yes |
+| Temperature change over 24 h | yes |
+| Tide (rising / falling) | yes |
+| Next high tide, next low tide | yes |
 | Wave height | yes |
 | Wave period | no |
 | Wave direction | no |
+
+## Tides
+
+Tide sensors work for every location. By default they come from the Open-Meteo model, which is
+**approximate**: in spot checks against official predictions the modelled times were roughly
+25 to 50 minutes early, so treat them as a guide and use a proper tide table if it matters.
+
+With a buoy API key (below), the integration uses **official predicted tides** from the
+Regional Coastal Monitoring Programme when a prediction station is within 15 km. Many stations
+publish nothing at the moment, so coverage is patchy. The `source` attribute on each tide sensor
+says which you are looking at.
 
 ## Measured buoy data (optional)
 

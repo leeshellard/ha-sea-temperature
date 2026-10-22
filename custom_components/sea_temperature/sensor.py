@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -27,7 +28,7 @@ from .const import DOMAIN, WARN_GRID_DISTANCE_KM
 class SeaSensorDescription(SensorEntityDescription):
     """Describes a sea sensor."""
 
-    value_fn: Callable[[SeaReading], float | str | None]
+    value_fn: Callable[[SeaReading], float | str | datetime | None]
 
 
 # Upper temperature bound (°C) for each band, tuned for UK/N. European waters.
@@ -39,6 +40,30 @@ SWIM_BANDS: tuple[tuple[float, str], ...] = (
 )
 SWIM_OPTIONS = [band for _, band in SWIM_BANDS] + ["warm"]
 ROUGH_WATER_WAVE_HEIGHT_M = 1.5
+
+
+# Douglas sea scale: upper significant wave height (m) for each state.
+SEA_STATE_BANDS: tuple[tuple[float, str], ...] = (
+    (0.1, "calm"),
+    (0.5, "smooth"),
+    (1.25, "slight"),
+    (2.5, "moderate"),
+    (4.0, "rough"),
+    (6.0, "very_rough"),
+    (9.0, "high"),
+    (14.0, "very_high"),
+)
+SEA_STATE_OPTIONS = [state for _, state in SEA_STATE_BANDS] + ["phenomenal"]
+TIDE_KEYS = {"tide_state", "next_high_tide", "next_low_tide"}
+
+
+def _sea_state(reading: SeaReading) -> str | None:
+    if reading.wave_height is None:
+        return None
+    for upper, state in SEA_STATE_BANDS:
+        if reading.wave_height < upper:
+            return state
+    return "phenomenal"
 
 
 def _swim_comfort(reading: SeaReading) -> str:
@@ -64,6 +89,40 @@ SENSORS: tuple[SeaSensorDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=SWIM_OPTIONS,
         value_fn=_swim_comfort,
+    ),
+    SeaSensorDescription(
+        key="temperature_change",
+        translation_key="temperature_change",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_fn=lambda r: r.temperature_change_24h,
+    ),
+    SeaSensorDescription(
+        key="sea_state",
+        translation_key="sea_state",
+        device_class=SensorDeviceClass.ENUM,
+        options=SEA_STATE_OPTIONS,
+        value_fn=_sea_state,
+    ),
+    SeaSensorDescription(
+        key="tide_state",
+        translation_key="tide_state",
+        device_class=SensorDeviceClass.ENUM,
+        options=["rising", "falling"],
+        value_fn=lambda r: r.tide.state if r.tide else None,
+    ),
+    SeaSensorDescription(
+        key="next_high_tide",
+        translation_key="next_high_tide",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda r: r.tide.next_high if r.tide else None,
+    ),
+    SeaSensorDescription(
+        key="next_low_tide",
+        translation_key="next_low_tide",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda r: r.tide.next_low if r.tide else None,
     ),
     SeaSensorDescription(
         key="wave_height",
@@ -140,6 +199,13 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.coordinator.data
+        key = self.entity_description.key
+        if key in TIDE_KEYS:
+            attrs = {"source": data.tide.source if data.tide else None}
+            if data.tide is not None:
+                attrs["next_high_height_m"] = data.tide.next_high_height
+                attrs["next_low_height_m"] = data.tide.next_low_height
+            return attrs
         attrs: dict[str, Any] = {
             "source": data.source,
             "reading_time": data.observed_at.isoformat(),
@@ -152,7 +218,9 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
             attrs["grid_latitude"] = data.grid_latitude
             attrs["grid_longitude"] = data.grid_longitude
             attrs["distance_to_grid_point_km"] = data.distance_km
-        if self.entity_description.key == "swim_comfort":
+        if key == "temperature_change":
+            attrs["note"] = "Change in the Open-Meteo modelled sea temperature over the last 24 hours."
+        if key == "swim_comfort":
             attrs["temperature"] = data.temperature
             attrs["rough_water"] = (
                 data.wave_height is not None

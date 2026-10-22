@@ -17,9 +17,11 @@ from .api import (
     NoSeaData,
     SeaReading,
     async_get_cco_buoys,
+    async_get_cco_tides,
     async_get_open_meteo,
     combine,
     nearest_buoy,
+    nearest_tide_station,
 )
 from .const import (
     BUOY_MAX_AGE,
@@ -28,6 +30,7 @@ from .const import (
     CONF_CCO_KEY,
     DEFAULT_BUOY_MAX_KM,
     DOMAIN,
+    TIDE_STATION_MAX_KM,
     UPDATE_INTERVAL,
     USER_AGENT,
 )
@@ -68,6 +71,7 @@ class SeaTemperatureCoordinator(DataUpdateCoordinator[SeaReading]):
             model_error = err
 
         nearest = None
+        official_tide = None
         options = self.config_entry.options
         if key := options.get(CONF_CCO_KEY):
             try:
@@ -82,6 +86,15 @@ class SeaTemperatureCoordinator(DataUpdateCoordinator[SeaReading]):
                     BUOY_MAX_AGE,
                     datetime.now(timezone.utc),
                 )
+                official_tide = nearest_tide_station(
+                    await async_get_cco_tides(
+                        session, key, options.get(CONF_CCO_DOMAIN, ""), USER_AGENT
+                    ),
+                    self._latitude,
+                    self._longitude,
+                    TIDE_STATION_MAX_KM,
+                    datetime.now(timezone.utc),
+                )
             except InvalidAuth:
                 _LOGGER.warning(
                     "The buoy API key or domain was rejected; using the model only. "
@@ -90,7 +103,7 @@ class SeaTemperatureCoordinator(DataUpdateCoordinator[SeaReading]):
             except CannotConnect as err:
                 _LOGGER.debug("Buoy data unavailable, using the model: %s", err)
 
-        reading = combine(model, nearest)
+        reading = combine(model, nearest, official_tide)
         if reading is None:
             raise UpdateFailed(str(model_error))
         return reading

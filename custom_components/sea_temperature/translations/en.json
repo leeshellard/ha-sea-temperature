@@ -64,6 +64,36 @@
       },
       "wave_direction": {
         "name": "Wave direction"
+      },
+      "temperature_change": {
+        "name": "Temperature change (24 h)"
+      },
+      "sea_state": {
+        "name": "Sea state",
+        "state": {
+          "calm": "Calm",
+          "smooth": "Smooth",
+          "slight": "Slight",
+          "moderate": "Moderate",
+          "rough": "Rough",
+          "very_rough": "Very rough",
+          "high": "High",
+          "very_high": "Very high",
+          "phenomenal": "Phenomenal"
+        }
+      },
+      "tide_state": {
+        "name": "Tide",
+        "state": {
+          "rising": "Rising",
+          "falling": "Falling"
+        }
+      },
+      "next_high_tide": {
+        "name": "Next high tide"
+      },
+      "next_low_tide": {
+        "name": "Next low tide"
       }
     }
   },
