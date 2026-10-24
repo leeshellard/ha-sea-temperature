@@ -21,13 +21,23 @@ marine model, and optionally real readings from UK coastal buoys and official ti
 
 ## Install (HACS)
 
-Click the button above, or add it by hand:
+Sea Temperature is in the default HACS store:
 
-1. HACS → ⋮ → **Custom repositories** → add `https://github.com/leeshellard/ha-sea-temperature`, category **Integration**.
-2. Install **Sea Temperature** and restart Home Assistant.
+1. Open **HACS** and search for **Sea Temperature**, or click the button above.
+2. Open it, click **Download**, then restart Home Assistant.
 3. **Settings → Devices & services → Add integration → Sea Temperature**.
 
 [![Add the integration to your Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=sea_temperature)
+
+<details>
+<summary>Can't find it in HACS? Add it as a custom repository</summary>
+
+If your HACS hasn't picked up the latest store listing yet:
+
+1. HACS → ⋮ → **Custom repositories** → add `https://github.com/leeshellard/ha-sea-temperature`, category **Integration**.
+2. Search for **Sea Temperature**, click **Download**, then restart Home Assistant.
+
+</details>
 
 ## Adding a location
 
