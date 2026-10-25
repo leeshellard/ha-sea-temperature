@@ -58,6 +58,23 @@ Add the integration again for each extra beach. Each one becomes a device with:
 | Wave period | no |
 | Wave direction | no |
 
+## Dashboard card
+
+The integration includes a card, so there is nothing extra to install. After updating, hard-refresh
+your browser, then add **Sea Temperature** from the dashboard's card picker, or use YAML:
+
+```yaml
+type: custom:sea-temperature-card
+entity: sensor.praa_sands_sea_temperature   # any sensor from the beach
+```
+
+Optional settings: `name` (title), `show_graph` (default `true`) and `days` (history length, default `7`).
+
+The card shows the current temperature with its 24-hour change, swim comfort (and a rough-water
+warning), sea state, waves, tide with the next high and low, where the reading came from, and a
+7-day history graph. Touch or hover on the graph to read values. The graph uses Home Assistant's
+own recorded history, so a brand-new beach fills in over its first week.
+
 ## Tides
 
 Tide sensors work for every location. By default they come from the Open-Meteo model, which is
