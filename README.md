@@ -3,13 +3,20 @@
 Sea temperature, swim comfort, sea state, waves and tides for any coastal location, with a
 search-by-name and map picker. Built with the UK in mind, works worldwide. Uses the Open-Meteo
 marine model, and optionally real readings from UK coastal buoys and official tide predictions.
+Includes a ready-made dashboard card with a 7-day temperature graph, so there is nothing extra to install.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=leeshellard&repository=ha-sea-temperature&category=integration)
 
 ## Screenshots
 
 <p align="center">
+  <img src="docs/images/card.png" alt="The Sea Temperature dashboard card: temperature, swim comfort, sea state, waves, tides and a 7-day graph" width="460">
+  <br><em>The bundled dashboard card, with a 7-day history graph</em>
+</p>
+
+<p align="center">
   <img src="docs/images/device.png" alt="A beach device with its sensors: tides, sea state, sea temperature, swim comfort, waves" width="640">
+  <br><em>Every beach is a device with its own sensors</em>
 </p>
 
 <table>
