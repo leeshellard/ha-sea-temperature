@@ -1,6 +1,6 @@
 /* Sea Temperature card — bundled with the sea_temperature integration. */
 
-const CARD_VERSION = "0.5.0";
+const CARD_VERSION = "0.5.1";
 const DOMAIN = "sea_temperature";
 const REFRESH_MS = 30 * 60 * 1000;
 
@@ -34,6 +34,8 @@ class SeaTemperatureCard extends HTMLElement {
     this._signature = "";
     this._hoverIndex = null;
     this._lastWidth = 0;
+    this.shadowRoot.addEventListener("click", (ev) => this._onActivate(ev));
+    this.shadowRoot.addEventListener("keydown", (ev) => this._onActivate(ev));
     this._resizer = new ResizeObserver(() => {
       const w = Math.round(this.getBoundingClientRect().width);
       if (Math.abs(w - this._lastWidth) > 8 && this._config && this._hass) {
@@ -190,6 +192,28 @@ class SeaTemperatureCard extends HTMLElement {
     return pts;
   }
 
+  // ---- clicking: open Home Assistant's own history dialog -----------------
+
+  _btn(entityId) {
+    return entityId && this._hass.states[entityId]
+      ? `data-entity="${esc(entityId)}" role="button" tabindex="0" title="Show history"`
+      : "";
+  }
+
+  _openMoreInfo(entityId) {
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      bubbles: true, composed: true, detail: { entityId },
+    }));
+  }
+
+  _onActivate(ev) {
+    if (ev.type === "keydown" && ev.key !== "Enter" && ev.key !== " ") return;
+    const target = ev.composedPath().find((n) => n.dataset && n.dataset.entity);
+    if (!target) return;
+    ev.preventDefault();
+    this._openMoreInfo(target.dataset.entity);
+  }
+
   // ---- rendering ---------------------------------------------------------
 
   _fmtState(entityId) {
@@ -243,7 +267,7 @@ class SeaTemperatureCard extends HTMLElement {
       const c = Number(changeS.state);
       if (Number.isFinite(c)) {
         const arrow = c > 0.04 ? "▲" : c < -0.04 ? "▼" : "▬";
-        change = `<span class="change" title="Change over the last 24 hours (model)">${arrow} ${Math.abs(c).toFixed(1)}${esc(unit)} / 24 h</span>`;
+        change = `<span class="change clickable" ${this._btn(ids.temperature_change)} title="Change over the last 24 hours (model). Click for history.">${arrow} ${Math.abs(c).toFixed(1)}${esc(unit)} / 24 h</span>`;
       }
     }
 
@@ -275,15 +299,15 @@ class SeaTemperatureCard extends HTMLElement {
               <div class="name">${esc(deviceName)}</div>
               <div class="source">${sourceLine}</div>
             </div>
-            ${swim ? `<div class="chips"><span class="chip" style="background:${swimColour}">${esc(swimLabel)}</span>${rough ? `<span class="chip warn">⚠ Rough water</span>` : ""}</div>` : ""}
+            ${swim ? `<div class="chips"><span class="chip clickable" ${this._btn(ids.swim_comfort)} style="background:${swimColour}">${esc(swimLabel)}</span>${rough ? `<span class="chip warn">⚠ Rough water</span>` : ""}</div>` : ""}
           </div>
-          <div class="hero"><span class="big">${big}</span><span class="unit">${esc(unit)}</span>${change}</div>
+          <div class="hero"><span class="hero-value clickable" ${this._btn(ids.sea_temperature)}><span class="big">${big}</span><span class="unit">${esc(unit)}</span></span>${change}</div>
           <div class="grid">
-            <div class="cell"><div class="label">Sea state</div><div class="val">${esc(this._fmtState(ids.sea_state))}</div></div>
-            <div class="cell"><div class="label">Waves</div><div class="val">${esc(waves)}</div></div>
-            <div class="cell"><div class="label">Tide ${tideApprox ? `<span class="approx" title="${esc(tideSource)}">(${tideApprox})</span>` : ""}</div><div class="val">${tideArrow} ${esc(tideS ? this._fmtState(ids.tide_state) : "–")}</div></div>
-            <div class="cell"><div class="label">Next high</div><div class="val">${esc(this._fmtTime(ids.next_high_tide))}</div></div>
-            <div class="cell"><div class="label">Next low</div><div class="val">${esc(this._fmtTime(ids.next_low_tide))}</div></div>
+            <div class="cell clickable" ${this._btn(ids.sea_state)}><div class="label">Sea state</div><div class="val">${esc(this._fmtState(ids.sea_state))}</div></div>
+            <div class="cell clickable" ${this._btn(ids.wave_height)}><div class="label">Waves</div><div class="val">${esc(waves)}</div></div>
+            <div class="cell clickable" ${this._btn(ids.tide_state)}><div class="label">Tide ${tideApprox ? `<span class="approx" title="${esc(tideSource)}">(${tideApprox})</span>` : ""}</div><div class="val">${tideArrow} ${esc(tideS ? this._fmtState(ids.tide_state) : "–")}</div></div>
+            <div class="cell clickable" ${this._btn(ids.next_high_tide)}><div class="label">Next high</div><div class="val">${esc(this._fmtTime(ids.next_high_tide))}</div></div>
+            <div class="cell clickable" ${this._btn(ids.next_low_tide)}><div class="label">Next low</div><div class="val">${esc(this._fmtTime(ids.next_low_tide))}</div></div>
           </div>
           ${graph}
         </div>
@@ -330,7 +354,7 @@ class SeaTemperatureCard extends HTMLElement {
 
     return `
       <div class="graph">
-        <div class="graph-head"><span>Last ${days} days</span>
+        <div class="graph-head"><span class="clickable" ${this._btn(this._siblings().sea_temperature)}>Last ${days} days ›</span>
           <span class="muted">low ${vmin.v.toFixed(1)} · high ${vmax.v.toFixed(1)} ${esc(unit)}</span></div>
         <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="svg" role="img" aria-label="Sea temperature over the last ${days} days">
           <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
@@ -400,6 +424,10 @@ class SeaTemperatureCard extends HTMLElement {
       .chips { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
       .chip { color:#fff; font-size:0.8rem; font-weight:500; padding:4px 10px; border-radius:999px; white-space:nowrap; }
       .chip.warn { background:#b45309; }
+      .clickable { cursor:pointer; }
+      .clickable:hover { filter:brightness(1.18); }
+      .clickable:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; border-radius:6px; }
+      .hero-value { display:inline-flex; align-items:baseline; gap:4px; }
       .hero { display:flex; align-items:baseline; gap:4px; margin:10px 0 12px; flex-wrap:wrap; }
       .big { font-size:3rem; line-height:1; font-weight:300; color: var(--primary-text-color); }
       .unit { font-size:1.2rem; color: var(--secondary-text-color); }

@@ -79,7 +79,7 @@ Optional settings: `name` (title), `show_graph` (default `true`) and `days` (his
 
 The card shows the current temperature with its 24-hour change, swim comfort (and a rough-water
 warning), sea state, waves, tide with the next high and low, where the reading came from, and a
-7-day history graph. Touch or hover on the graph to read values. The graph uses Home Assistant's
+7-day history graph. Touch or hover on the graph to read values, and click or tap any value (the temperature, swim comfort, sea state, waves, tides, or "Last 7 days") to open Home Assistant's history for that sensor. The graph uses Home Assistant's
 own recorded history, so a brand-new beach fills in over its first week.
 
 ## Tides
