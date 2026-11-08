@@ -15,6 +15,7 @@ OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 CCO_TIDES_URL = "https://coastalmonitoring.org/observations/tidepredictions/latest.geojson"
 CCO_WAVES_URL = "https://coastalmonitoring.org/observations/waves/latest.geojson"
+NDBC_LATEST_URL = "https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt"
 
 _CURRENT_FIELDS = "sea_surface_temperature,wave_height,wave_period,wave_direction"
 _TIMEOUT = aiohttp.ClientTimeout(total=20)
@@ -300,6 +301,77 @@ async def async_get_cco_buoys(
                 wave_direction=_float(props.get("pdir")),
             )
         )
+    return buoys
+
+
+# The NDBC feed covers every station and only changes about hourly, so share one
+# download between all configured locations for a few minutes.
+_NDBC_CACHE_TTL = timedelta(minutes=10)
+_ndbc_cache: tuple[datetime, list[Buoy]] | None = None
+
+
+def parse_ndbc(text: str) -> list[Buoy]:
+    """Parse NDBC's latest_obs.txt, keeping stations that report a water temperature.
+
+    Columns: STN LAT LON YYYY MM DD hh mm WDIR WSPD GST WVHT DPD APD MWD PRES PTDY
+    ATMP WTMP DEWP VIS TIDE. Missing values are "MM". Times are UTC.
+    """
+    buoys: list[Buoy] = []
+    for line in text.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        cols = line.split()
+        if len(cols) < 19:
+            continue
+        temperature = _float(None if cols[18] == "MM" else cols[18])
+        lat = _float(cols[1])
+        lon = _float(cols[2])
+        if temperature is None or lat is None or lon is None:
+            continue
+        try:
+            observed = datetime(
+                int(cols[3]), int(cols[4]), int(cols[5]), int(cols[6]), int(cols[7]),
+                tzinfo=timezone.utc,
+            )
+        except ValueError:
+            continue
+
+        def value(i: int) -> float | None:
+            return None if cols[i] == "MM" else _float(cols[i])
+
+        buoys.append(
+            Buoy(
+                name=f"NDBC {cols[0]}",
+                latitude=lat,
+                longitude=lon,
+                observed_at=observed,
+                temperature=temperature,
+                wave_height=value(11),
+                wave_period=value(12),
+                wave_direction=value(14),
+            )
+        )
+    return buoys
+
+
+async def async_get_ndbc_buoys(
+    session: aiohttp.ClientSession, user_agent: str
+) -> list[Buoy]:
+    """Fetch the latest NOAA NDBC observations (no API key needed)."""
+    global _ndbc_cache
+    now = datetime.now(timezone.utc)
+    if _ndbc_cache is not None and now - _ndbc_cache[0] < _NDBC_CACHE_TTL:
+        return _ndbc_cache[1]
+    try:
+        async with session.get(
+            NDBC_LATEST_URL, headers={"User-Agent": user_agent}, timeout=_TIMEOUT
+        ) as resp:
+            resp.raise_for_status()
+            text = await resp.text()
+    except (aiohttp.ClientError, TimeoutError) as err:
+        raise CannotConnect(str(err)) from err
+    buoys = parse_ndbc(text)
+    _ndbc_cache = (now, buoys)
     return buoys
 
 

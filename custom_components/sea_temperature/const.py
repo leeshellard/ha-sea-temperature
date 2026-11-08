@@ -8,6 +8,7 @@ CONF_LOCATION_NAME = "name"
 CONF_CCO_KEY = "cco_api_key"
 CONF_CCO_DOMAIN = "cco_domain"
 CONF_BUOY_MAX_KM = "buoy_max_distance_km"
+CONF_USE_NDBC = "use_ndbc"
 
 DEFAULT_BUOY_MAX_KM = 25
 # Official tide predictions are only used from a station this close.

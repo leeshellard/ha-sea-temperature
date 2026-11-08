@@ -23,6 +23,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     NumberSelector,
     NumberSelectorConfig,
+    BooleanSelector,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -42,6 +43,7 @@ from .const import (
     CONF_CCO_DOMAIN,
     CONF_CCO_KEY,
     CONF_LOCATION_NAME,
+    CONF_USE_NDBC,
     DEFAULT_BUOY_MAX_KM,
     DOMAIN,
     MAX_GRID_DISTANCE_KM,
@@ -181,7 +183,7 @@ def _label(place: Place) -> str:
 
 
 class SeaTemperatureOptionsFlow(OptionsFlow):
-    """Optional measured buoy data from the Regional Coastal Monitoring Programme."""
+    """Measured buoy data: NOAA NDBC (no key) and the UK Regional Coastal Monitoring Programme."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -192,9 +194,13 @@ class SeaTemperatureOptionsFlow(OptionsFlow):
             key = (user_input.get(CONF_CCO_KEY) or "").strip()
             domain = (user_input.get(CONF_CCO_DOMAIN) or "").strip()
             domain = domain.removeprefix("https://").removeprefix("http://").strip("/")
+            base = {
+                CONF_BUOY_MAX_KM: user_input[CONF_BUOY_MAX_KM],
+                CONF_USE_NDBC: user_input[CONF_USE_NDBC],
+            }
             if not key:
-                # Blank key turns the buoy layer off.
-                return self.async_create_entry(data={})
+                # Blank key turns the UK buoy layer off.
+                return self.async_create_entry(data=base)
             if not domain:
                 errors[CONF_CCO_DOMAIN] = "domain_required"
             else:
@@ -208,11 +214,7 @@ class SeaTemperatureOptionsFlow(OptionsFlow):
                     errors["base"] = "cannot_connect"
                 else:
                     return self.async_create_entry(
-                        data={
-                            CONF_CCO_KEY: key,
-                            CONF_CCO_DOMAIN: domain,
-                            CONF_BUOY_MAX_KM: user_input[CONF_BUOY_MAX_KM],
-                        }
+                        data={**base, CONF_CCO_KEY: key, CONF_CCO_DOMAIN: domain}
                     )
 
         return self.async_show_form(
@@ -233,6 +235,9 @@ class SeaTemperatureOptionsFlow(OptionsFlow):
                             min=5, max=100, step=1, unit_of_measurement="km"
                         )
                     ),
+                    vol.Required(
+                        CONF_USE_NDBC, default=current.get(CONF_USE_NDBC, True)
+                    ): BooleanSelector(),
                 }
             ),
             errors=errors,

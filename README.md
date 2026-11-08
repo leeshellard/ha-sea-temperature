@@ -2,7 +2,8 @@
 
 Sea temperature, swim comfort, sea state, waves and tides for any coastal location, with a
 search-by-name and map picker. Built with the UK in mind, works worldwide. Uses the Open-Meteo
-marine model, and optionally real readings from UK coastal buoys and official tide predictions.
+marine model, real readings from nearby NOAA buoys (mostly US waters, no key needed), and optionally
+UK coastal buoys and official UK tide predictions.
 Includes a ready-made dashboard card with a 7-day temperature graph, so there is nothing extra to install.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=leeshellard&repository=ha-sea-temperature&category=integration)
@@ -93,26 +94,37 @@ Regional Coastal Monitoring Programme when a prediction station is within 15 km.
 publish nothing at the moment, so coverage is patchy. The `source` attribute on each tide sensor
 says which you are looking at.
 
-## Measured buoy data (optional)
+## Measured buoy data
 
-If a Regional Coastal Monitoring Programme wave buoy that reports sea temperature is close to your
-beach, the integration can use its **measured** reading instead of the model, falling back to the
-model when no recent buoy is close enough. Wave values come from the buoy too when it reports them.
+Where a buoy is close to your beach, the integration uses its **measured** sea temperature instead of
+the model, falling back to the model when no recent buoy is within range (default 25 km, adjustable
+in the options). Wave values come from the buoy too when it reports them. Buoys with no reading in
+the last 3 hours are ignored. The `source`, `buoy`, `buoy_distance_km` and `model_temperature`
+attributes show what you are looking at.
+
+The sources are tried in this order: UK coastal buoy, then NOAA NDBC buoy, then the model.
+
+### NOAA NDBC buoys (no key needed)
+
+The [National Data Buoy Center](https://www.ndbc.noaa.gov/) runs buoys and coastal stations around
+the US coast, the Great Lakes, Hawaii, the Caribbean and some other regions. This is on by default
+and needs no setup. Turn it off under **Settings → Devices & services → Sea Temperature → Configure**
+if you prefer the model only. Many stations report temperature only; wave values then come from the
+model.
+
+### UK coastal buoys (optional, needs a free key)
 
 1. Request a free API key on the [CCO API page](https://coastalmonitoring.org/ccoresources/api/)
    ("Obtaining an API key for your own service"). You give them a domain; keys only work with the
    domain they were issued for.
 2. In Home Assistant open **Settings → Devices & services → Sea Temperature → Configure** on your
-   beach, then enter the key, the same domain, and the furthest buoy distance you will accept
-   (default 25 km).
-3. The sensors then show `source`, `buoy`, `buoy_distance_km` and `model_temperature` so you can see
-   what you are looking at. Buoys with no reading in the last 3 hours are ignored.
+   beach, then enter the key and the same domain.
 
-Leave the key blank to turn it off. In testing, nearby buoys read within about 1 °C of the model in spot checks.
+Leave the key blank to turn the UK buoys off.
 
-Real time data from the buoys is from the
-[Regional Coastal Monitoring Programme](https://coastalmonitoring.org/), made freely available
-under the Open Government Licence. These are real-time data and are not quality-controlled.
+Buoy data is real-time and not quality-controlled. NDBC data is from NOAA. UK buoy data is from the
+[Regional Coastal Monitoring Programme](https://coastalmonitoring.org/), made freely available under
+the Open Government Licence.
 
 ## How accurate is it?
 

@@ -169,9 +169,9 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
 
     _attr_has_entity_name = True
     _attr_attribution = (
-        "Model data from Open-Meteo.com. Buoy data, when enabled, is from the Regional "
-        "Coastal Monitoring Programme under the Open Government Licence (real-time, "
-        "not quality-controlled)."
+        "Model data from Open-Meteo.com. Buoy data, when available, is from NOAA's "
+        "National Data Buoy Center or the Regional Coastal Monitoring Programme "
+        "(Open Government Licence). Buoy data is real-time and not quality-controlled."
     )
     entity_description: SeaSensorDescription
 
@@ -187,7 +187,7 @@ class SeaSensor(CoordinatorEntity[SeaTemperatureCoordinator], SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
-            manufacturer="Open-Meteo / Regional Coastal Monitoring",
+            manufacturer="Open-Meteo / NOAA NDBC / Regional Coastal Monitoring",
             model="Marine model and buoys",
             entry_type=DeviceEntryType.SERVICE,
         )

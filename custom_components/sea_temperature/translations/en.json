@@ -100,15 +100,17 @@
   "options": {
     "step": {
       "init": {
-        "title": "Measured buoy data (optional)",
-        "description": "Use real readings from the nearest Regional Coastal Monitoring buoy instead of the model when one is close enough. Needs a free API key from coastalmonitoring.org (see the README). Leave the key blank to turn this off.",
+        "title": "Measured buoy data",
+        "description": "Use real readings from a nearby buoy instead of the model when one is close enough. NOAA NDBC buoys (mostly US waters) need no key. For UK coastal buoys, add a free API key from coastalmonitoring.org (see the README); leave it blank to skip those.",
         "data": {
           "cco_api_key": "API key",
           "cco_domain": "Domain the key was issued for",
-          "buoy_max_distance_km": "Maximum distance to a buoy"
+          "buoy_max_distance_km": "Maximum distance to a buoy",
+          "use_ndbc": "Use NOAA NDBC buoys"
         },
         "data_description": {
-          "cco_domain": "The domain you gave when you requested the key, e.g. example.org"
+          "cco_domain": "The domain you gave when you requested the key, e.g. example.org",
+          "use_ndbc": "Free, no key needed. Used only when no UK buoy is in range."
         }
       }
     },

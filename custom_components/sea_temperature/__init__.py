@@ -24,6 +24,7 @@ from .api import (
     SeaReading,
     async_get_cco_buoys,
     async_get_cco_tides,
+    async_get_ndbc_buoys,
     async_get_open_meteo,
     combine,
     nearest_buoy,
@@ -34,6 +35,7 @@ from .const import (
     CONF_BUOY_MAX_KM,
     CONF_CCO_DOMAIN,
     CONF_CCO_KEY,
+    CONF_USE_NDBC,
     DEFAULT_BUOY_MAX_KM,
     DOMAIN,
     TIDE_STATION_MAX_KM,
@@ -113,6 +115,19 @@ class SeaTemperatureCoordinator(DataUpdateCoordinator[SeaReading]):
                 )
             except CannotConnect as err:
                 _LOGGER.debug("Buoy data unavailable, using the model: %s", err)
+
+        if nearest is None and options.get(CONF_USE_NDBC, True):
+            try:
+                nearest = nearest_buoy(
+                    await async_get_ndbc_buoys(session, USER_AGENT),
+                    self._latitude,
+                    self._longitude,
+                    options.get(CONF_BUOY_MAX_KM, DEFAULT_BUOY_MAX_KM),
+                    BUOY_MAX_AGE,
+                    datetime.now(timezone.utc),
+                )
+            except CannotConnect as err:
+                _LOGGER.debug("NDBC data unavailable, using the model: %s", err)
 
         reading = combine(model, nearest, official_tide)
         if reading is None:
